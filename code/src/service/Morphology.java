@@ -61,16 +61,15 @@ public class Morphology {
 			}
 			// 如果是/，判断下一个字符
 			else if (nowChar == '/') {
-				i++;
 				// 若下一个字符是/，说明是注释，一直往后到下一行
-				if (input.charAt(i) == '/') {
-					while (nowChar != '\r' && i < input.length()) {
+				if (input.charAt(i+1) == '/') {
+					while (input.charAt(i) != '\r' && i < input.length()) {
 						i++;
 					}
 				}
-				// 否则是除号，继续下一次循环，对该字符进行处理
+				// 否则认为是除号，进行除法处理
 				else {
-					continue;
+					recognizeOtherSym();
 				}
 			}
 
@@ -270,7 +269,6 @@ public class Morphology {
 		int type;
 
 		// 判断当前字符和后续是不是字母或数字，是的话继续加入
-
 		do {
 			str = str + input.charAt(i);
 			if (!next()) {

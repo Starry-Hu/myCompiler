@@ -10,9 +10,9 @@ import java.util.ArrayList;
  */
 public class E {
 	// 该语句块的true出口链表
-	private ArrayList<Integer> trueExits;
+	private ArrayList<Integer> trueExits = new ArrayList<>();
 	// 该该语句块的false出口链表
-	private ArrayList<Integer> falseExits;
+	private ArrayList<Integer> falseExits = new ArrayList<>();
 
 	public ArrayList<Integer> getTrueExits() {
 		return trueExits;

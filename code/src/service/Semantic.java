@@ -79,13 +79,15 @@ public class Semantic {
 	/**
 	 * 产生四元式
 	 * 
-	 * @param op
-	 * @param strLeft
-	 * @param strRight
-	 * @param jumpNum
+	 * @param operator
+	 * @param leftAddress
+	 * @param rightAddress
+	 * @param resultAddress
 	 */
-	private void Emit(int operator, int leftAddress, int rightAddress, int resultAddress) {
+	private void emit(int operator, int leftAddress, int rightAddress, int resultAddress) {
 		Equality4 equality4 = new Equality4();
+		// 其大小即下次要存放的位置，equality4List.size() = nextquad
+		equality4.setLabel(equality4List.size());
 		equality4.setOperator(operator);
 		equality4.setLeftAddress(leftAddress);
 		equality4.setRightAddress(rightAddress);
@@ -269,7 +271,7 @@ public class Semantic {
 		// 如果是标识符，为简单句，之后推出赋值句
 		if (tokenList.get(i).getType() == 18) {
 			next();
-			assignSent();
+			assignSent(s);
 		}
 		// 如果出现了begin/if/while，则之后为结构句的处理
 		else if (tokenList.get(i).getType() == 2 || tokenList.get(i).getType() == 8
@@ -283,14 +285,16 @@ public class Semantic {
 	/**
 	 * 赋值句assignSent//〈赋值句〉→〈变量〉：＝〈表达式〉
 	 */
-	private void assignSent() {
+	private void assignSent(S s) {
 		if (tokenList.get(i).getType() == 31)// :=
 		{
 			// assignIdAddr记录上一个token文件项的地址，即被赋值标识符的地址
 			int assignIdAddr = tokenList.get(i - 1).getAddress();
 			next();
 			expression();// 表达式
-			Emit(51, tt, 0, assignIdAddr);// 生成四元式，即assignId:=tt
+			emit(51, tt, 0, assignIdAddr);// 生成四元式，即assignId:=tt
+			
+			s.getNext().add(equality4List.size());
 		} else {
 			error = "赋值句变量后缺少：=";
 		}
@@ -323,7 +327,7 @@ public class Semantic {
 
 		if (error.equals("")) {
 			next();
-			// 如果是or，执行E → E1 or M E2，其中注意回填
+			// 如果是or，执行E → E1 or M E2
 			if (tokenList.get(i).getType() == 11) {
 				// 记录四元式表项的数量值，即地址M.quad
 				int mquad = equality4List.size();
@@ -337,21 +341,20 @@ public class Semantic {
 				e.getTrueExits().addAll(e2.getTrueExits());
 				// 即e.f=e2.f
 				e.setFalseExits(e2.getFalseExits());
-
-				for (int e1_true : e1.getFalseExits()) {
-					// 执行回填函数,把链首k所链接的每个四元式的第四分量都改写为地址m;即backpatch(e1.false,m.quad)
-					backPatch(e1_true, mquad);
+				
+				// 执行回填函数,即backpatch(e1.false,m.quad)
+				for (int e1_false : e1.getFalseExits()) {
+					backPatch(e1_false, mquad);
 				}
 			}
 			// 如果不是or，执行的E → E1，直接e.t=e1.t;e.f=e1.f
+			// 注意Java的引用传值，此处不允许直接赋=
 			else {
-				e = e1;
+				e.setTrueExits(e1.getTrueExits());
+				e.setFalseExits(e1.getFalseExits());
 				before();
 			}
 		}
-		// else {
-		// e = e1;
-		// }
 	}
 
 	/**
@@ -365,7 +368,6 @@ public class Semantic {
 			next();
 			if (tokenList.get(i).getType() == 1)// and
 			{
-				// 记录四元式表项的数量值，即地址M.quad
 				int mquad = equality4List.size();
 				next();
 				E e2 = new E();
@@ -378,15 +380,16 @@ public class Semantic {
 				e.getFalseExits().addAll(e1.getFalseExits());
 				e.getFalseExits().addAll(e2.getFalseExits());
 
-				for (int e1_false : e1.getTrueExits()) {
+				for (int e1_true : e1.getTrueExits()) {
 					// 执行回填函数,把链首k所链接的每个四元式的第四分量都改写为地址m;即backpatch(e1.false,m.quad)
-					backPatch(e1_false, mquad);
+					backPatch(e1_true, mquad);
 				}
 			}
 
 			// 如果不是and，直接e.t=e1.t,e.f=e1.f
 			else {
-				e = e1;
+				e.setTrueExits(e1.getTrueExits());
+				e.setFalseExits(e1.getFalseExits());
 				before();
 			}
 		}
@@ -445,14 +448,14 @@ public class Semantic {
 					|| tokenList.get(i).getType() == 35 || tokenList.get(i).getType() == 36
 					|| tokenList.get(i).getType() == 37) {
 				next();
-				// 如果是运算符，后需再接标识符。 e.t=nextquad，e.f=nextquad+1
-				if (tokenList.get(i).getType() == 18) {
+				// 如果是运算符，后需再接标识符/常数/实数。 e.t=nextquad，e.f=nextquad+1
+				if (tokenList.get(i).getType() == 18 || tokenList.get(i).getType() == 19 || tokenList.get(i).getType() == 20) {
 					// 合并出口
 					e.getTrueExits().add(equality4List.size());
 					e.getFalseExits().add(equality4List.size() + 1);
-					// 生成四元式，即a<b的四元式为(j<,a,b,0)，需要根据运算符来匹配数字。
+					// 生成四元式，即a<b的四元式为(j<,a,b,0)，需要根据前一项运算符来匹配op值。
 					int op = 0;
-					switch (tokenList.get(i).getType()) {
+					switch (tokenList.get(i-1).getType()) {
 					case 32:// =
 						op = 56;
 						break;
@@ -472,12 +475,11 @@ public class Semantic {
 						op = 58;
 						break;
 					}
-					Emit(op + tokenList.get(i - 1).getAddress(), tokenList.get(i - 2).getAddress(),
-							tokenList.get(i).getAddress(), 0);// 真执行
-					Emit(52, 0, 0, 0);// 假执行
+					emit(op, tokenList.get(i - 2).getAddress(),tokenList.get(i).getAddress(), 0);// 真执行
+					emit(52, 0, 0, -1);// 假执行
 
 				} else {
-					error = "关系运算符后缺少标识符";
+					error = "关系运算符后缺少标识符/整数/实数";
 				}
 			}
 
@@ -487,9 +489,9 @@ public class Semantic {
 				e.getTrueExits().add(equality4List.size());
 				e.getFalseExits().add(equality4List.size() + 1);
 				// 生成四元式,即E—>a的四元式为(jnz,a,_,0)
-				Emit(55, tokenList.get(i).getAddress(), 0, 0);
-				// 生成四元式，(j,_,_,0)
-				Emit(52, 0, 0, 0);
+				emit(55, tokenList.get(i).getAddress(), 0, 0);
+				// 生成四元式，(j,_,_,-1)
+				emit(52, 0, 0, -1);
 				next();
 			}
 		}
@@ -543,7 +545,7 @@ public class Semantic {
 
 				// 生成四元式，即x:=y+z的前半部分运算的四元式：(+,y,z,T1)
 				int temp = newTemp();
-				Emit(op, left, tt, temp);
+				emit(op, left, tt, temp);
 				tt = temp;
 			} else {
 				before();
@@ -583,7 +585,7 @@ public class Semantic {
 
 				// 生成四元式，即x:=y*z的前半部分运算的四元式：(*,y,z,T1)
 				int temp = newTemp();
-				Emit(op, left, tt, temp);
+				emit(op, left, tt, temp);
 				tt = temp;
 			} else {
 				before();
@@ -671,7 +673,7 @@ public class Semantic {
 					// 若N—>ε,n.next=nextquad,并生成四元式(j,_,_,0)
 					S n = new S();
 					n.getNext().add(equality4List.size());
-					Emit(52, 0, 0, 0);
+					emit(52, 0, 0, -1);
 
 					int mquad2 = equality4List.size();
 
@@ -693,16 +695,17 @@ public class Semantic {
 					for (int e_false : e.getFalseExits()) {
 						backPatch(e_false, mquad2);
 					}
-				} else {
-					// 没有else情况的
+				} 
+				// 没有else情况的
+				else {
 					// 回填backpath(E.true,M.quad)
-					for (int e_false : e.getFalseExits()) {
-						backPatch(e_false, mquad1);
+					for (int e_true : e.getTrueExits()) {
+						backPatch(e_true, mquad1);
 					}
 					// 合并出口
 					s.setNext(e.getFalseExits());
 					s.getNext().addAll(s1.getNext());
-
+					
 					before();
 				}
 			} else {
@@ -721,6 +724,7 @@ public class Semantic {
 		int mquad1 = equality4List.size();
 		E e = new E();
 		boolExpression(e);
+		
 		if (error.equals("")) {
 			next();
 			// 与while配套内部语句需要有do引导一个执行句
@@ -740,7 +744,7 @@ public class Semantic {
 				// 合并next
 				s.setNext(e.getFalseExits());
 				// 胜出四元式(j,_,_,mquad1)
-				Emit(52, 0, 0, mquad1);
+				emit(52, 0, 0, mquad1);
 			} else {
 				error = "while语句缺少do";
 			}

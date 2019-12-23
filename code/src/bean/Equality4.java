@@ -7,6 +7,8 @@ package bean;
  *
  */
 public class Equality4 {
+	// 四元式序号
+	private int label;
 	// 操作码
 	private int operator;
 	// 左操作数在symbol表的入口地址
@@ -15,6 +17,17 @@ public class Equality4 {
 	private int rightAddress;
 	// 结果在symbol表的入口地址
 	private int resultAddress;
+
+	// **是否基本块的入口 - 生成目标代码中使用**
+	private boolean isEntrance;
+
+	public int getLabel() {
+		return label;
+	}
+
+	public void setLabel(int label) {
+		this.label = label;
+	}
 
 	public int getOperator() {
 		return operator;
@@ -48,11 +61,17 @@ public class Equality4 {
 		this.resultAddress = resultAddress;
 	}
 
-	@Override
-	public String toString() {
-		return "(" + operator + ", " + leftAddress + ", " + rightAddress
-				+ ", " + resultAddress + ")";
+	public boolean isEntrance() {
+		return isEntrance;
 	}
 
-	
+	public void setEntrance(boolean isEntrance) {
+		this.isEntrance = isEntrance;
+	}
+
+	@Override
+	public String toString() {
+		return "(" + label + ")(" + operator + ", " + leftAddress + ", " + rightAddress + ", " + resultAddress + ")";
+	}
+
 }

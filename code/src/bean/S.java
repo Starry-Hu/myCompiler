@@ -9,7 +9,7 @@ import java.util.ArrayList;
  *
  */
 public class S {
-	private ArrayList<Integer> next;
+	private ArrayList<Integer> next = new ArrayList<>();
 
 	public ArrayList<Integer> getNext() {
 		return next;
