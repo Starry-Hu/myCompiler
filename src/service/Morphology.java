@@ -193,6 +193,7 @@ public class Morphology {
 				}
 				// 若已为实数其后还有小数点，则发生错误，flag置为false
 				else {
+					flag = false;
 					Error error = new Error();
 					error.setRow(rowNum);
 					error.setErrorSrc(str);
@@ -206,13 +207,12 @@ public class Morphology {
 							break;
 						}
 					}
-
-					flag = false;
 				}
 			}
 
 			// 如果出现字母，进行错误处理
 			else if (isAlpha(input.charAt(i))) {
+				flag = false;
 				Error error = new Error();
 				error.setRow(rowNum);
 				error.setErrorSrc(str + input.charAt(i));
@@ -231,8 +231,6 @@ public class Morphology {
 						break;
 					}
 				}
-				// i--;
-
 			}
 
 			// 以上情况都不是，则发生错误，停止执行
@@ -316,7 +314,7 @@ public class Morphology {
 		String str = input.substring(i, i + 1);
 
 		// 如果为：或<或>，还需继续判断下一个字符，看是否是组合
-		if (str == ":" || str == "<" || str == ">") {
+		if (str.equals(":") || str.equals("<") || str.equals(">") ){
 			i++;
 
 			// 若为=，则符号为：=或<=或>=
@@ -324,7 +322,7 @@ public class Morphology {
 				str += input.charAt(i);
 			}
 			// 若str为<且当前字符为>,说明是尖括号<>
-			else if (input.charAt(i) == '>' && str == "<") {
+			else if (input.charAt(i) == '>' && str.equals("<")) {
 
 				str += input.charAt(i);
 			}

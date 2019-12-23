@@ -48,4 +48,11 @@ public class Equality4 {
 		this.resultAddress = resultAddress;
 	}
 
+	@Override
+	public String toString() {
+		return "(" + operator + ", " + leftAddress + ", " + rightAddress
+				+ ", " + resultAddress + ")";
+	}
+
+	
 }

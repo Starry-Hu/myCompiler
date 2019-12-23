@@ -9,7 +9,7 @@ import java.io.IOException;
 
 public class ReadTxt {
 	public static void main(String args[]) {
-		readFile();
+		readFile("input.txt");
 		writeFile();
 	}
 
@@ -18,8 +18,8 @@ public class ReadTxt {
 	 * 
 	 * @return
 	 */
-	public static String readFile() {
-		String pathname = "C:\\Users\\starryhu\\Desktop\\input.txt"; // 绝对路径或相对路径都可以，写入文件时演示相对路径,读取以上路径的input.txt文件
+	public static String readFile(String pathname) {
+		// String pathname = "input.txt"; // 绝对路径或相对路径都可以，写入文件时演示相对路径,读取以上路径的input.txt文件
 		// 防止文件建立或读取失败，用catch捕捉错误并打印，也可以throw;
 		// 不关闭文件会导致资源的泄露，读写文件都同理
 		// Java7的try-with-resources可以优雅关闭文件，异常时自动关闭文件；详细解读https://stackoverflow.com/a/12665271

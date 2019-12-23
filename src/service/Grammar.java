@@ -16,7 +16,7 @@ public class Grammar {
 	// 扫描下标
 	private int i;
 	// 错误信息
-	String error;
+	String error = "";
 
 	/**
 	 * token表当前指针是否可前移，true时指针已经前移了一位；false表示到达了token表的最后一项
@@ -56,7 +56,13 @@ public class Grammar {
 			// 是标识符，作为程序名字
 			if (tokenList.get(i).getType() == 18) {
 				next();
-				programBody();// 执行程序体
+				// 判断是否有;结束
+				if (tokenList.get(i).getType() == 30) {
+					next();
+					programBody();// 执行程序体
+				}else {
+					error = "该程序program方法名后缺少： ;";
+				}
 			} else {
 				error = "该程序program缺少方法名";
 			}
@@ -109,7 +115,7 @@ public class Grammar {
 						j--; // 跳过,
 						index = tokenList.get(j).getAddress();
 						symbolList.get(index).setType(tokenList.get(i).getType());
-
+						j--; // 跳过当前处理的
 					}
 
 					next();
@@ -119,8 +125,11 @@ public class Grammar {
 						if (tokenList.get(i).getType() == 2) { // begin，执行复合句
 							next();
 							complexSentence();
-						} else {
+						} else if (tokenList.get(i).getType() == 16){ // var，继续变量定义
+							next();
 							varDefine();// 继续执行变量定义
+						} else {
+							error = "变量定义结束后随语句错误";
 						}
 					} else {
 						error = "变量定义后面缺少；";

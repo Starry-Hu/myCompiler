@@ -1,0 +1,8 @@
+program test;
+var a,b,c:real;
+begin
+a:=1.2b56;
+b:=2.3.6;
+c:=5.6;
+x:=a*(b+c)+b/a;
+end
