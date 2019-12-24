@@ -242,7 +242,7 @@ public class Semantic {
 	private void complexSentence() {
 		sentenceList();// 执行语句表
 		if (error.equals("")) {
-			if (tokenList.get(i).getType() == 30 && tokenList.get(i + 1).getType() == 6)// end
+			if (tokenList.get(i).getType() == 30 && tokenList.get(i + 1).getType() == 6)// ;end
 			{
 				return;
 			} else {
@@ -481,7 +481,7 @@ public class Semantic {
 						break;
 					}
 					emit(op, tokenList.get(i - 2).getAddress(),tokenList.get(i).getAddress(), 0);// 真执行
-					emit(52, 0, 0, 0);// 假执行
+					emit(52, 0, 0, 0);// -- 假执行 -- 需要块结束后回填
 
 				} else {
 					error = "关系运算符后缺少标识符/整数/实数";
@@ -702,6 +702,11 @@ public class Semantic {
 					for (int e_false : e.getFalseExits()) {
 						backPatch(e_false, mquad2);
 					}
+					
+					// --- 整个块结束，跳出块 ---
+					for (int s_next : s.getNext()) {
+						backPatch(s_next, equality4List.size());
+					}
 				} 
 				// 没有else情况的
 				else {
@@ -713,6 +718,10 @@ public class Semantic {
 					s.setNext(e.getFalseExits());
 					s.getNext().addAll(s1.getNext());
 					
+					// --- 整个块结束，跳出块 ---
+					for (int s_next : s.getNext()) {
+						backPatch(s_next, equality4List.size());
+					}
 					before();
 				}
 			} else {
@@ -755,7 +764,9 @@ public class Semantic {
 				emit(52, 0, 0, mquad1);
 				
 				// --- 整个块结束，跳出块 ---
-				backPatch(mquad2 - 1, equality4List.size());
+				for (int s_next : s.getNext()) {
+					backPatch(s_next, equality4List.size());
+				}
 			} else {
 				error = "while语句缺少do";
 			}

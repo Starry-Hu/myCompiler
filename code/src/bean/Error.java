@@ -38,4 +38,10 @@ public class Error {
 		this.errorType = errorType;
 	}
 
+	@Override
+	public String toString() {
+		return "第" + getRow() + "行： " + getErrorSrc() + "原因：" + getErrorType();
+	}
+
+	
 }
