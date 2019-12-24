@@ -19,13 +19,13 @@ public class Semantic {
 	ArrayList<Token> tokenList = new ArrayList<>();
 	// symbol符号表
 	ArrayList<Symbol> symbolList = new ArrayList<>();
-	// 四元式序列表
+	// 四元式序列表 -- 下一个可用地址nextquad = equality4List.size()// 填充一个对象占了0号位，所以大小就是下次的位置
 	ArrayList<Equality4> equality4List = new ArrayList<>();
 	// 错误信息
 	String error = "";
 
-	// 扫描下标
-	private int i;
+	// 扫描token表的下标
+	private int i = 1;
 	// 临时变量下标
 	private int ti = 1;
 	// 某次运算对象的地址（具有传递性）
@@ -50,7 +50,7 @@ public class Semantic {
 	}
 
 	/**
-	 * 创建临时变量，返回它再符号表的地址
+	 * 创建临时变量，返回它在符号表的编号地址
 	 * @return
 	 */
 	private int newTemp() {
@@ -72,8 +72,10 @@ public class Semantic {
 	 * @param addr2
 	 */
 	private void backPatch(int updateWhich, int updateValue) {
-		// 把updateWhich对应四元式的第四分量都改写为地址updateValue
-		equality4List.get(updateWhich).setResultAddress(updateValue);
+		if (updateWhich < equality4List.size()) {
+			// 把updateWhich对应四元式的第四分量都改写为地址updateValue
+			equality4List.get(updateWhich).setResultAddress(updateValue);
+		}
 	}
 
 	/**
@@ -86,7 +88,6 @@ public class Semantic {
 	 */
 	private void emit(int operator, int leftAddress, int rightAddress, int resultAddress) {
 		Equality4 equality4 = new Equality4();
-		// 其大小即下次要存放的位置，equality4List.size() = nextquad
 		equality4.setLabel(equality4List.size());
 		equality4.setOperator(operator);
 		equality4.setLeftAddress(leftAddress);
@@ -98,12 +99,16 @@ public class Semantic {
 
 	/**
 	 * 传入词法分析产生的token文件和symbol文件，进行语法分析
-	 * 
-	 * @param morphology
+	 * 注意！ 对四元式序列表填充一个对象，使其起始位置从1开始
+	 * @param tokenList
+	 * @param symbolList
 	 */
 	public void initial(ArrayList<Token> tokenList, ArrayList<Symbol> symbolList) {
 		this.tokenList = tokenList;
 		this.symbolList = symbolList;
+		
+		Equality4 equality4 = new Equality4();
+		equality4List.add(equality4);
 	}
 
 	/**
@@ -254,7 +259,7 @@ public class Semantic {
 		executeSentence(s);// 执行句
 		if (error.equals("")) {
 			next();
-			if (tokenList.get(i).getType() == 30)// 若为分号，继续循环执行语句表
+			if (tokenList.get(i).getType() == 30)// 若为分号，继续执行语句表
 			{
 				next();
 				sentenceList();
@@ -294,6 +299,7 @@ public class Semantic {
 			expression();// 表达式
 			emit(51, tt, 0, assignIdAddr);// 生成四元式，即assignId:=tt
 			
+			// s.next初始化， equality4List.size = nextquad
 			s.getNext().add(equality4List.size());
 		} else {
 			error = "赋值句变量后缺少：=";
@@ -428,13 +434,11 @@ public class Semantic {
 	private void boolValue(E e) {
 		// 如果是true或false，布尔常数
 		if (tokenList.get(i).getType() == 15 || tokenList.get(i).getType() == 7) {
-			///// equality4List.size()值为四元式的总个数，相当于nextquad。 ////
-			///// 其初值为0，每执行一次emit过程，nextquad将会自动加1 ////
 			// 合并出口到e中
-			// 即e.t=nextquad
-			e.getTrueExits().add(equality4List.size());
-			// 即e.f=nextquad+1
-			e.getFalseExits().add(equality4List.size() + 1);
+			// 即e.t=nextquad,e.f=nextquad+1
+			int nextquad = equality4List.size();
+			e.getTrueExits().add(nextquad);
+			e.getFalseExits().add(nextquad + 1);
 			// tt记录布尔量的地址
 			tt = tokenList.get(i).getAddress();
 		}
@@ -450,9 +454,10 @@ public class Semantic {
 				next();
 				// 如果是运算符，后需再接标识符/常数/实数。 e.t=nextquad，e.f=nextquad+1
 				if (tokenList.get(i).getType() == 18 || tokenList.get(i).getType() == 19 || tokenList.get(i).getType() == 20) {
-					// 合并出口
-					e.getTrueExits().add(equality4List.size());
-					e.getFalseExits().add(equality4List.size() + 1);
+					// 合并出口  e.t=nextquad，e.f=nextquad+1
+					int nextquad = equality4List.size();
+					e.getTrueExits().add(nextquad);
+					e.getFalseExits().add(nextquad + 1);
 					// 生成四元式，即a<b的四元式为(j<,a,b,0)，需要根据前一项运算符来匹配op值。
 					int op = 0;
 					switch (tokenList.get(i-1).getType()) {
@@ -476,7 +481,7 @@ public class Semantic {
 						break;
 					}
 					emit(op, tokenList.get(i - 2).getAddress(),tokenList.get(i).getAddress(), 0);// 真执行
-					emit(52, 0, 0, -1);// 假执行
+					emit(52, 0, 0, 0);// 假执行
 
 				} else {
 					error = "关系运算符后缺少标识符/整数/实数";
@@ -486,12 +491,14 @@ public class Semantic {
 			// 只有一个标识符，说明该标识符为布尔型，则e.t=nextquad，e.f=nextquad+1
 			else {
 				before();
-				e.getTrueExits().add(equality4List.size());
-				e.getFalseExits().add(equality4List.size() + 1);
+				// 合并出口 e.t=nextquad，e.f=nextquad+1
+				int nextquad = equality4List.size();
+				e.getTrueExits().add(nextquad);
+				e.getFalseExits().add(nextquad + 1);
 				// 生成四元式,即E—>a的四元式为(jnz,a,_,0)
 				emit(55, tokenList.get(i).getAddress(), 0, 0);
-				// 生成四元式，(j,_,_,-1)
-				emit(52, 0, 0, -1);
+				// 生成四元式，(j,_,_,0)
+				emit(52, 0, 0, 0);
 				next();
 			}
 		}
@@ -673,7 +680,7 @@ public class Semantic {
 					// 若N—>ε,n.next=nextquad,并生成四元式(j,_,_,0)
 					S n = new S();
 					n.getNext().add(equality4List.size());
-					emit(52, 0, 0, -1);
+					emit(52, 0, 0, 0);
 
 					int mquad2 = equality4List.size();
 
@@ -741,10 +748,14 @@ public class Semantic {
 				for (int e_true : e.getTrueExits()) {
 					backPatch(e_true, mquad2);
 				}
+			
 				// 合并next
 				s.setNext(e.getFalseExits());
-				// 胜出四元式(j,_,_,mquad1)
+				// 生成四元式(j,_,_,mquad1)
 				emit(52, 0, 0, mquad1);
+				
+				// --- 整个块结束，跳出块 ---
+				backPatch(mquad2 - 1, equality4List.size());
 			} else {
 				error = "while语句缺少do";
 			}

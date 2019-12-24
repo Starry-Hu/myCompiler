@@ -26,9 +26,16 @@ public class Create {
 	private boolean isRegFullUse = false;
 
 	/**
-	 * 使用**语义分析后**的符号表来初始化
+	 * 
 	 * 
 	 * @param symbolList
+	 */
+
+	/**
+	 * 使用**语义分析后**的符号表与四元式序列表来初始化。 两表的有效字符都从1开始。 注意此处将汇编代码表填充一个，使其有效位从1开始
+	 * 
+	 * @param symbolList
+	 * @param equality4List
 	 */
 	public void initial(ArrayList<Symbol> symbolList, ArrayList<Equality4> equality4List) {
 		this.symbolList = symbolList;
@@ -36,46 +43,57 @@ public class Create {
 	}
 
 	/**
+	 * --- 主要处理的代码块，调用 ---
+	 */
+	public void implement() {
+		// 划分基本块
+		divideCodeByBlock();
+		// 对每个块回填待用信息链
+		backFilling();
+		// 生成目标代码
+		createTarget();
+	}
+
+	/**
 	 * 从后往前的回填待用信息
 	 */
 	private void backFilling() {
-		for (int i = equality4List.size() - 1; i >= 0; i--) {
+		for (int i = equality4List.size() - 1; i >= 1; i--) {
 			int op = equality4List.get(i).getOperator();
 			// 非转移语句的op速记符范围（全运算）
 			if (op < 52) {
 				// 获取结果数（被赋值数）
-				int resultAddr = equality4List.get(i).getRightAddress();
+				int resultAddr = equality4List.get(i).getResultAddress();
 				String resultName = symbolList.get(resultAddr).getName();
-
 				// 将其对应的symbol的待用/活跃的初始值N,N
 				for (Symbol symbol : symbolList) {
 					if (symbol.getName().equals(resultName)) {
-						String[] info = { "N", "N" };
-						symbol.getInfoLink().add(info);
+						symbol.getInfoLink().add("N,N");
 					}
 				}
 
 				// 获取左操作数
 				int leftAddr = equality4List.get(i).getLeftAddress();
 				String leftName = symbolList.get(leftAddr).getName();
-
 				// 将其对应的symbol设置待用/活跃
 				for (Symbol symbol : symbolList) {
 					if (symbol.getName().equals(leftName)) {
-						String[] info = { i + "", "Y" };
+						String info = i + ",Y";
 						symbol.getInfoLink().add(info);
 					}
 				}
 
-				// 获取右操作数
-				int rightAddr = equality4List.get(i).getRightAddress();
-				String rightName = symbolList.get(rightAddr).getName();
-
-				// 将其对应的symbol设置待用/活跃
-				for (Symbol symbol : symbolList) {
-					if (symbol.getName().equals(rightName)) {
-						String[] info = { i + "", "Y" };
-						symbol.getInfoLink().add(info);
+				// ----- 非:=运算才需再获取右操作数，否则获取错误 -----
+				if (op != 51) {
+					// 获取右操作数
+					int rightAddr = equality4List.get(i).getRightAddress();
+					String rightName = symbolList.get(rightAddr).getName();
+					// 将其对应的symbol设置待用/活跃
+					for (Symbol symbol : symbolList) {
+						if (symbol.getName().equals(rightName)) {
+							String info = i + ",Y";
+							symbol.getInfoLink().add(info);
+						}
 					}
 				}
 			}
@@ -87,7 +105,7 @@ public class Create {
 	 */
 	private void divideCodeByBlock() {
 		// 第一条语句作为入口
-		equality4List.get(0).setEntrance(true);
+		equality4List.get(1).setEntrance(true);
 
 		// 遍历处理每个语句
 		for (int i = 0; i < equality4List.size(); i++) {
@@ -108,39 +126,6 @@ public class Create {
 	}
 
 	/**
-	 * 根据token名寻找某token是否有存放在指定的register中
-	 * 
-	 * @param tokenName
-	 * @param register
-	 * @return
-	 */
-	private boolean isSaveIn(String tokenName, String register) {
-		// 所有同名symbol的地址存放情况是一样的，所以找到一个即可结束寻找
-		for (Symbol symbol : symbolList) {
-			if (symbol.getName().equals(tokenName)) {
-				// 查找register是否在存放情况中
-				return symbol.getSaveValue().contains(register);
-			}
-		}
-		return false;
-	}
-
-	/**
-	 * ---- 多次重复内部使用 ----，将该符号名对应的符号存放信息加上该寄存器；而该寄存器存放信息加上该符号名
-	 * 
-	 * @param symbolName
-	 * @param register
-	 */
-	private void symbolSaveOneReg(String symbolName, ArrayList<String> register) {
-		register.add(symbolName);
-		for (Symbol symbol : symbolList) {
-			if (symbol.getName().equals(symbolName)) {
-				symbol.getSaveValue().add("register");
-			}
-		}
-	}
-
-	/**
 	 * 为某四元式分配寄存器
 	 * 
 	 * @param equality4
@@ -153,16 +138,16 @@ public class Create {
 
 		// 如果bx当前存放为空，或左操作数存放在bx中，则直接拿bx来用
 		if (isSaveIn(leftName, "bx") || bx.size() == 0) {
-			// 如果之前不在bx中，则往bx中加入该操作数，且该操作数的存放情况中加入bx
+			// 如果之前不在bx中，则往bx中加入该操作数，且该操作数的存放情况中加入bx，并生成MOV四元式
 			if (!isSaveIn(leftName, "bx")) {
-				symbolSaveOneReg(leftName, bx);
+				symbolSaveOneReg(leftName, bx, "bx");
 			}
 			return "bx";
 		}
 		// 同理判断dx
 		else if (isSaveIn(leftName, "dx") || bx.size() == 0) {
 			if (!isSaveIn(leftName, "dx")) {
-				symbolSaveOneReg(leftName, dx);
+				symbolSaveOneReg(leftName, dx, "dx");
 			}
 			return "dx";
 		}
@@ -171,13 +156,55 @@ public class Create {
 			isRegFullUse = true;
 			if (bx.size() > dx.size())// 选取一个现在存放变量最少的寄存器
 			{
-				symbolSaveOneReg(leftName, dx);
+				symbolSaveOneReg(leftName, dx, "dx");
 				return "dx";
 			} else {
-				symbolSaveOneReg(leftName, bx);
+				symbolSaveOneReg(leftName, bx, "bx");
 				return "bx";
 			}
 		}
+	}
+
+	/**
+	 * 根据token名寻找某token是否有存放在指定的register中
+	 * 
+	 * @param tokenName
+	 * @param register
+	 * @return
+	 */
+	private boolean isSaveIn(String tokenName, String register) {
+		// 所有同名symbol的地址存放情况是一样的，所以找到一个即可结束寻找
+		for (Symbol symbol : symbolList) {
+			if (symbol.getName().equals(tokenName)) {
+				// 查找register是否在存放情况中
+				if (!symbol.getSaveValue().isEmpty()) {
+					return symbol.getSaveValue().contains(register);
+				}
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * ---- 多次重复内部使用 ----，将该符号名对应的符号存放信息加上该寄存器；而该寄存器存放信息加上该符号名
+	 * 
+	 * @param symbolName
+	 * @param register
+	 */
+	private void symbolSaveOneReg(String symbolName, ArrayList<String> register, String registerName) {
+		register.add(symbolName);
+		for (Symbol symbol : symbolList) {
+			if (symbol.getName().equals(symbolName)) {
+				symbol.getSaveValue().add("register");
+			}
+		}
+		// 输出MOV四元式
+		Assemble assemble = new Assemble();
+		assemble.setLabel(assembleList.size());
+		assemble.setOpreator("MOV");
+		assemble.setLeftObj(registerName);
+		assemble.setRightObj(symbolName);
+		assembleList.add(assemble);
 	}
 
 	/**
@@ -209,19 +236,19 @@ public class Create {
 				a1.setLabel(assembleList.size());
 				a1.setOpreator("MOV");
 				a1.setLeftObj(register);
-				a1.setRightObj(leftAddr + "");
+				a1.setRightObj(symbolList.get(rightAddr).getName());
 				assembleList.add(a1);
 				// CMP reg right
 				Assemble a2 = new Assemble();
 				a2.setLabel(assembleList.size());
 				a2.setOpreator("MOV");
 				a2.setLeftObj(register);
-				a2.setRightObj(rightAddr + "");
+				a2.setRightObj(symbolList.get(rightAddr).getName());
 				assembleList.add(a2);
 				// JL(小于转j<)/JLE(小于等于转j<=)/JG(大于转j>)/JGE(大于等于转j>=)/JNZ(不等转j<>)/JZ(等于转j=)
 				Assemble a3 = new Assemble();
 				a3.setLabel(assembleList.size());
-				a3.setLeftObj(resultAddr + "");
+				a3.setLeftObj(symbolList.get(resultAddr).getName());
 				switch (op) {
 				case 53:// j<
 					a3.setOpreator("JL");
@@ -244,7 +271,8 @@ public class Create {
 				}
 				assembleList.add(a3);
 				// 清相关信息链
-				delSymbolOnceInfoLink(symbolList.get(leftAddr).getName(), symbolList.get(rightAddr).getName());
+				// delSymbolOnceInfoLink(symbolList.get(leftAddr).getName(),
+				// symbolList.get(rightAddr).getName());
 			}
 			// + - * /
 			else if (op == 43 || op == 45 || op == 41 || op == 48) {
@@ -254,17 +282,18 @@ public class Create {
 				String register = getRegister(equality4);
 
 				// MOV reg left
-				Assemble a1 = new Assemble();
-				a1.setLabel(assembleList.size());
-				a1.setOpreator("MOV");
-				a1.setLeftObj(register);
-				a1.setRightObj(leftAddr + "");
-				assembleList.add(a1);
+				// 此处在分配寄存器的时候已经移动了左操作数，这里不必再生成一遍
+				// Assemble a1 = new Assemble();
+				// a1.setLabel(assembleList.size());
+				// a1.setOpreator("MOV");
+				// a1.setLeftObj(register);
+				// a1.setRightObj(symbolList.get(leftAddr).getName());
+				// assembleList.add(a1);
 				// op reg right
 				Assemble a2 = new Assemble();
 				a2.setLabel(assembleList.size());
 				a2.setLeftObj(register);
-				a2.setRightObj(rightAddr + "");
+				a2.setRightObj(symbolList.get(rightAddr).getName());
 				switch (op) {
 				case 43: // +
 					a2.setOpreator("ADD");
@@ -282,20 +311,21 @@ public class Create {
 				assembleList.add(a2);
 
 				// 清相关信息链
-				delSymbolOnceInfoLink(symbolList.get(leftAddr).getName(), symbolList.get(rightAddr).getName());
+				// delSymbolOnceInfoLink(symbolList.get(leftAddr).getName(),
+				// symbolList.get(rightAddr).getName());
 			}
 			// :=
 			else if (op == 51) {
-				int leftAddr = equality4.getLeftAddress();
+				int resultAddr = equality4.getResultAddress();
 				String register = getRegister(equality4);
 				Assemble assemble = new Assemble();
 				assemble.setLabel(assembleList.size());
-				assemble.setOpreator("MOV");
-				assemble.setLeftObj(register);
-				assemble.setRightObj(leftAddr + "");
-
+				assemble.setOpreator("MOV");// 注意以下迪操作数互换位置
+				assemble.setLeftObj(symbolList.get(resultAddr).getName());
+				assemble.setRightObj(register);
+				assembleList.add(assemble);
 				// 清相关信息链
-				delSymbolOnceInfoLink(symbolList.get(leftAddr).getName(), "");
+				// delSymbolOnceInfoLink(symbolList.get(leftAddr).getName(), "");
 			}
 		}
 	}

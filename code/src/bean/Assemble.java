@@ -48,4 +48,9 @@ public class Assemble {
 		this.rightObj = rightObj;
 	}
 
+	@Override
+	public String toString() {
+		return "(" + label + ") (" + opreator + ", " + leftObj + ", " + rightObj + ")";
+	}
+
 }

@@ -24,18 +24,35 @@ public class Morphology {
 
 	// 输入字符串
 	private String input;
-	// 扫描下标
+	// 扫描输入字符串的下标
 	private int i;
 	// 扫描行号
 	private int rowNum = 1;
 
 	/**
 	 * --- 传入字符串进行初始化 ---
+	 *
+	 * 注意！此处对token表、symbol表首先填入一个测试字符，使得起始位置从1开始
+	 * 所以每个token/symbol其编号值直接为当前表的大小（值对应）
 	 * 
 	 * @param s
 	 */
 	public void initial(String s) {
 		input = s;
+		// 对两表填充第一个字符占0号位
+		Token token = new Token();
+		token.setLabel(0);
+		token.setName("************");
+		token.setType(99);
+		token.setAddress(-1);
+		tokenList.add(token);
+		
+		Symbol symbol = new Symbol();
+		symbol.setNumber(0);
+		symbol.setName("************");
+		symbol.setType(99);
+		symbolList.add(symbol);
+		
 		makeMachineCodes();
 	}
 

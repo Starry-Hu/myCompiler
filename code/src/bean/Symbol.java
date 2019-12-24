@@ -19,10 +19,10 @@ public class Symbol {
 
 	// **待用信息与活跃信息链 - 生成目标代码中使用** --初始为N,N
 	// 使用栈方便从后往前记录使用信息
-	private Stack<String[]> infoLink = new Stack<>();
+	private Stack<String> infoLink = new Stack<>();
 
 	// **存放地址 - 分配寄存器时使用**
-	private ArrayList<String> saveValue;
+	private ArrayList<String> saveValue = new ArrayList<>();
 
 	public int getNumber() {
 		return number;
@@ -48,11 +48,11 @@ public class Symbol {
 		this.type = type;
 	}
 
-	public Stack<String[]> getInfoLink() {
+	public Stack<String> getInfoLink() {
 		return infoLink;
 	}
 
-	public void setInfoLink(Stack<String[]> infoLink) {
+	public void setInfoLink(Stack<String> infoLink) {
 		this.infoLink = infoLink;
 	}
 
@@ -64,8 +64,21 @@ public class Symbol {
 		this.saveValue = saveValue;
 	}
 
+
 	@Override
 	public String toString() {
 		return "(" + number + ")(" + name + ", " + type + ")";
+	}
+
+	public String toStringWithInfoLink() {
+		String base = toString() + " [";
+		for (int i = 0; i < infoLink.size(); i++) {
+			if (i != infoLink.size() - 1) {
+				base += "(" + infoLink.get(i) + ") ->";
+			} else {
+				base += "(" + infoLink.get(i) + ") ]";
+			}
+		}
+		return base;
 	}
 }

@@ -13,8 +13,8 @@ public class Grammar {
 	// 错误记录表
 	ArrayList<String> errorList = new ArrayList<>();
 
-	// 扫描下标
-	private int i;
+	// 扫描token表的下标
+	private int i = 1;
 	// 错误信息
 	String error = "";
 
@@ -38,14 +38,14 @@ public class Grammar {
 
 	/**
 	 * 传入词法分析产生的token文件和symbol文件，进行语法分析
-	 * 
-	 * @param morphology
+	 * @param tokenList
+	 * @param symbolList
 	 */
 	public void initial(ArrayList<Token> tokenList, ArrayList<Symbol> symbolList) {
 		this.tokenList = tokenList;
 		this.symbolList = symbolList;
 	}
-
+	
 	/**
 	 * --- 主要处理的代码块，调用 ---
 	 */

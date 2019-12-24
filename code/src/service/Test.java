@@ -1,5 +1,6 @@
 package service;
 
+import bean.Assemble;
 import bean.Equality4;
 import bean.Error;
 import bean.Symbol;
@@ -54,14 +55,32 @@ public class Test {
 		System.out.println(semantic.error);
 
 		System.out.println("------------------ 语义分析更新symbol表如下： ------------------");
-		for (Symbol symbol : semantic.symbolList) {
+		for (int i = 1; i < semantic.symbolList.size(); i++) {
+			Symbol symbol = semantic.symbolList.get(i);
 			System.out.println(symbol.toString());
 		}
 
 		System.out.println("------------------ 语义分析得到的四元式序列如下： ------------------");
-		for (Equality4 equality4 : semantic.equality4List) {
+		for (int i = 1; i < semantic.equality4List.size(); i++) {
+			Equality4 equality4 = semantic.equality4List.get(i);
 			System.out.println(equality4.toString());
 		}
+		
+//		Create create = new Create();
+//		create.initial(semantic.symbolList, semantic.equality4List);// 使用语义分析后的信息来初始化
+//		create.implement();
+//		
+//		System.out.println("---------------------------------------------------------");
+//
+//		System.out.println("------------------ 生成目标代码时更新symbol表如下： ------------------");
+//		for (Symbol symbol : create.symbolList) {
+//			System.out.println(symbol.toStringWithInfoLink());
+//		}
+//
+//		System.out.println("------------------ 生成目标代码如下： ------------------");
+//		for (Assemble assemble : create.assembleList) {
+//			System.out.println(assemble.toString());
+//		}
 	}
 
 }
