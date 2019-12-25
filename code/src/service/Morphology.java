@@ -332,7 +332,7 @@ public class Morphology {
 		if (str.equals(":") || str.equals("<") || str.equals(">") ){
 			i++;
 
-			// 若为=，则符号为：=或<=或>=
+			// 若为=，则符号为:=或<=或>=
 			if (input.charAt(i) == '=') {
 				str += input.charAt(i);
 			}

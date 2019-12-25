@@ -1,13 +1,11 @@
 package service;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
-
 import bean.Assemble;
+import bean.BasicBlock;
 import bean.Equality4;
 import bean.Symbol;
-import bean.Token;
 
 /**
  * 生成目标代码
@@ -19,16 +17,18 @@ public class Create {
 	// symbol符号表
 	ArrayList<Symbol> symbolList = new ArrayList<>();
 	// 汇编代码表
-	ArrayList<Assemble> assembleList = new ArrayList<>();
+//	ArrayList<Assemble> assembleList = new ArrayList<>();
+	// 基本块表
+	ArrayList<BasicBlock> blocks = new ArrayList<>();
 	// 四元式序列表
 	private ArrayList<Equality4> equality4List = new ArrayList<>();
 	// bx寄存器存放的内容
 	private ArrayList<String> bx = new ArrayList<>();
 	// dx寄存器存放的内容
 	private ArrayList<String> dx = new ArrayList<>();
-	
+
 	// 入口四元式序号数组
-	private ArrayList<Integer> entranceNum = new ArrayList<>(); 
+	private ArrayList<Integer> entranceNum = new ArrayList<>();
 	// 判断是否寄存器都被使用，且左操作数未使用
 	private boolean isRegFullUse = false;
 
@@ -55,10 +55,6 @@ public class Create {
 	public void implement() {
 		// 划分基本块
 		divideBlock();
-		for(Equality4 equality4 : equality4List) {
-			System.out.println(equality4.toString() + equality4.isEntrance());
-		}
-		System.out.println();
 		// 对每个块回填待用信息链
 		backFilling();
 		// 生成目标代码
@@ -108,7 +104,7 @@ public class Create {
 					}
 				}
 			}
-			
+
 		}
 		// 显示生成的待用信息
 		for (int i = 1; i < symbolList.size(); i++) {
@@ -123,7 +119,7 @@ public class Create {
 		// 第一条语句作为入口
 		equality4List.get(1).setEntrance(true);
 		entranceNum.add(1);
-		
+
 		// 遍历处理每个语句
 		for (int i = 1; i < equality4List.size(); i++) {
 			int op = equality4List.get(i).getOperator();
@@ -142,33 +138,49 @@ public class Create {
 				}
 			}
 		}
+		// 将最后一句end虚语句加入
+		entranceNum.add(equality4List.size());
 		// 对各入口序号排序
 		Collections.sort(entranceNum);
+
+		// 根据入口序号生成基本块
+		for (int i = 0; i < entranceNum.size(); i++) {
+			BasicBlock basicBlock = new BasicBlock();
+			// 将该基本块所包含的四元式加入
+			ArrayList<Equality4> equality4s = new ArrayList<>();
+			for (int j = entranceNum.get(i); j < equality4List.size() && j < entranceNum.get(i + 1); j++) {
+				equality4s.add(equality4List.get(j));
+			}
+			basicBlock.setName("BLOCK" + blocks.size());
+			basicBlock.setEquality4List(equality4s);
+			blocks.add(basicBlock);
+		}
 	}
 
 	/**
 	 * 为某四元式分配寄存器
-	 * 
+	 * 如果需要mov移动，则将产生的目标代码加入到指定的目标代码序列中
 	 * @param equality4
+	 * @param assembleList
 	 * @return
 	 */
-	private String getRegister(Equality4 equality4) {
+	private String getRegister(Equality4 equality4, ArrayList<Assemble> assembleList) {
 		// 判断是否寄存器bx/dx里面只有左操作数的值，那么则可接着用该寄存器
 		int leftAddr = equality4.getLeftAddress();
 		String leftName = symbolList.get(leftAddr).getName();
 
-		// 如果bx当前存放为空，或左操作数存放在bx中，则直接拿bx来用
+		// 如果左操作数存放在bx中，或bx当前存放为空，则直接拿bx来用
 		if (isSaveIn(leftName, "bx") || bx.size() == 0) {
 			// 如果之前不在bx中，则往bx中加入该操作数，且该操作数的存放情况中加入bx，并生成MOV四元式
 			if (!isSaveIn(leftName, "bx")) {
-				symbolSaveOneReg(leftName, bx, "bx");
+				symbolSaveOneReg(leftName, bx, "bx",assembleList);
 			}
 			return "bx";
 		}
 		// 同理判断dx
-		else if (isSaveIn(leftName, "dx") || bx.size() == 0) {
+		else if (isSaveIn(leftName, "dx") || dx.size() == 0) {
 			if (!isSaveIn(leftName, "dx")) {
-				symbolSaveOneReg(leftName, dx, "dx");
+				symbolSaveOneReg(leftName, dx, "dx",assembleList);
 			}
 			return "dx";
 		}
@@ -177,10 +189,10 @@ public class Create {
 			isRegFullUse = true;
 			if (bx.size() > dx.size())// 选取一个现在存放变量最少的寄存器
 			{
-				symbolSaveOneReg(leftName, dx, "dx");
+				symbolSaveOneReg(leftName, dx, "dx",assembleList);
 				return "dx";
 			} else {
-				symbolSaveOneReg(leftName, bx, "bx");
+				symbolSaveOneReg(leftName, bx, "bx",assembleList);
 				return "bx";
 			}
 		}
@@ -207,21 +219,21 @@ public class Create {
 	}
 
 	/**
-	 * ---- 多次重复内部使用 ----，将该符号名对应的符号存放信息加上该寄存器；而该寄存器存放信息加上该符号名
-	 * 
+	 * 将该符号名对应的符号存放信息加上该寄存器；而该寄存器存放信息加上该符号名 （前提该寄存器没有存放该符号）
+	 * 并且将移动的目标代码加入到指定的目标代码序列中
 	 * @param symbolName
 	 * @param register
 	 */
-	private void symbolSaveOneReg(String symbolName, ArrayList<String> register, String registerName) {
+	private void symbolSaveOneReg(String symbolName, ArrayList<String> register, 
+			String registerName, ArrayList<Assemble> assembleList) {
 		register.add(symbolName);
 		for (Symbol symbol : symbolList) {
 			if (symbol.getName().equals(symbolName)) {
-				symbol.getSaveValue().add("register");
+				symbol.getSaveValue().add(registerName);
 			}
 		}
 		// 输出MOV四元式
 		Assemble assemble = new Assemble();
-		assemble.setLabel(assembleList.size());
 		assemble.setOpreator("MOV");
 		assemble.setLeftObj(registerName);
 		assemble.setRightObj(symbolName);
@@ -232,139 +244,138 @@ public class Create {
 	 * 生成目标代码
 	 */
 	private void createTarget() {
-		// 遍历每个四元式
-		for (Equality4 equality4 : equality4List) {
-			int op = equality4.getOperator();
-			int leftAddr = equality4.getLeftAddress();
-			int rightAddr = equality4.getRightAddress();
-			int resultAddr = equality4.getResultAddress();
-			
-			String leftName = symbolList.get(leftAddr).getName();
-			String rightName = symbolList.get(rightAddr).getName();
-			String resultName = symbolList.get(resultAddr).getName();
-			
-			// j 对于无条件跳转，跳转序号只与四元式的结果数有关，且放入目标代码的左操作数中
-			if (op == 52) {
-				Assemble assemble = new Assemble();
-				// JMP x _
-				assemble.setLabel(assembleList.size());
-				assemble.setOpreator("JMP");
-				assemble.setLeftObj(resultAddr + "");// 转移的目标地址
-				assembleList.add(assemble);
-			}
-			// j< j<= j> j>= j<> j=
-			else if (op == 53 || op == 54 || op == 57 || op == 58 || op == 55 || op == 56) {
-				String register = getRegister(equality4);
+		// 遍历每个基本块
+		for (BasicBlock basicBlock : blocks) {
+			// 对基本块的每个四元式做处理
+			ArrayList<Assemble> assembleList = new ArrayList<>();//每个基本块对应的目标代码序列
+			for (Equality4 equality4 : basicBlock.getEquality4List()) {
+				// 每个四元式分配的寄存器
+				String register = getRegister(equality4,assembleList);
+				int op = equality4.getOperator();
+				int leftAddr = equality4.getLeftAddress();
+				int rightAddr = equality4.getRightAddress();
+				int resultAddr = equality4.getResultAddress();
 
-				// MOV reg left
-				Assemble a1 = new Assemble();
-				a1.setLabel(assembleList.size());
-				a1.setOpreator("MOV");
-				a1.setLeftObj(register);
-				a1.setRightObj(leftName);
-				assembleList.add(a1);
-				// CMP reg right
-				Assemble a2 = new Assemble();
-				a2.setLabel(assembleList.size());
-				a2.setOpreator("CMP");
-				a2.setLeftObj(register);
-				a2.setRightObj(rightName);
-				assembleList.add(a2);
-				// JL(小于转j<)/JLE(小于等于转j<=)/JG(大于转j>)/JGE(大于等于转j>=)/JNZ(不等转j<>)/JZ(等于转j=)
-				// 第三步的跳转序号与四元式的结果数有关，且放入目标代码的左操作数中
-				Assemble a3 = new Assemble();
-				a3.setLabel(assembleList.size());
-				a3.setLeftObj(resultName);
-				a3.setRightObj(" ");
-				switch (op) {
-				case 53:// j<
-					a3.setOpreator("JL");
-					break;
-				case 54:// j<=
-					a3.setOpreator("JLE");
-					break;
-				case 57:// j>
-					a3.setOpreator("JG");
-					break;
-				case 58:// j>=
-					a3.setOpreator("JGE");
-					break;
-				case 55:// j<>
-					a3.setOpreator("JNZ");
-					break;
-				case 56:// j=
-					a3.setOpreator("JZ");
-					break;
-				}
-				assembleList.add(a3);
-			}
-			// + - * /
-			else if (op == 43 || op == 45 || op == 41 || op == 48) {
-				String register = getRegister(equality4);
+				String leftName = symbolList.get(leftAddr).getName();
+				String rightName = symbolList.get(rightAddr).getName();
+				String resultName = symbolList.get(resultAddr).getName();
 
-				// MOV reg left
-				// 此处在分配寄存器的时候已经移动了左操作数，这里不必再生成一遍
-				Assemble a1 = new Assemble();
-				a1.setLabel(assembleList.size());
-				a1.setLeftObj(register);
-				a1.setRightObj(rightName);
-				switch (op) {
-				case 43: // +
-					a1.setOpreator("ADD");
-					break;
-				case 45: // -
-					a1.setOpreator("SUB");
-					break;
-				case 41: // *
-					a1.setOpreator("MUL");
-					break;
-				case 48: // /
-					a1.setOpreator("DIV");
-					break;
+				// j 对于无条件跳转，跳转序号只与四元式的结果数有关，且放入目标代码的左操作数中
+				if (op == 52) {
+					// 跳转语句中跳到的基本块序号
+					String turnBlock = getBlockByEquality4(resultAddr);
+					Assemble assemble = new Assemble();
+					// JMP x _
+					assemble.setOpreator("JMP");
+					assemble.setLeftObj(turnBlock);// 转移的目标地址
+					assemble.setRightObj("");
+					assembleList.add(assemble);
 				}
-				assembleList.add(a1);
-				
-				// 如果左右操作数在register中，需要删去（此时运算后变成了结果数）
-				if (isSaveIn(leftName, register) || isSaveIn(rightName, register) ) {
-					for(Symbol symbol : symbolList) {
-						if (symbol.getName().equals(leftName) || symbol.getName().equals(rightName) ) {
-							// 检测同名register并将其从存储信息中删掉
-							symbol.getSaveValue().remove(register);
-							// 将该register的左操作数删去
-							if (register.equals("bx")) {
-								bx.remove(leftName);
-								bx.remove(rightName);
-							}else if (register.equals("dx")) {
-								dx.remove(leftName);
-								bx.remove(rightName);
+				// j< j<= j> j>= j<> j=
+				else if (op == 53 || op == 54 || op == 57 || op == 58 || op == 55 || op == 56) {
+					// MOV reg left
+					Assemble a1 = new Assemble();
+					a1.setOpreator("MOV");
+					a1.setLeftObj(register);
+					a1.setRightObj(leftName);
+					assembleList.add(a1);
+					// CMP reg right
+					Assemble a2 = new Assemble();
+					a2.setOpreator("CMP");
+					a2.setLeftObj(register);
+					a2.setRightObj(rightName);
+					assembleList.add(a2);
+					// JL(小于转j<)/JLE(小于等于转j<=)/JG(大于转j>)/JGE(大于等于转j>=)/JNZ(不等转j<>)/JZ(等于转j=)
+					// 跳转语句中跳到的基本块序号
+					String turnBlock = getBlockByEquality4(resultAddr);
+					Assemble a3 = new Assemble();
+					a3.setLeftObj(turnBlock);
+					a3.setRightObj(" ");
+					switch (op) {
+					case 53:// j<
+						a3.setOpreator("JL");
+						break;
+					case 54:// j<=
+						a3.setOpreator("JLE");
+						break;
+					case 57:// j>
+						a3.setOpreator("JG");
+						break;
+					case 58:// j>=
+						a3.setOpreator("JGE");
+						break;
+					case 55:// j<>
+						a3.setOpreator("JNZ");
+						break;
+					case 56:// j=
+						a3.setOpreator("JZ");
+						break;
+					}
+					assembleList.add(a3);
+				}
+				// + - * /
+				else if (op == 43 || op == 45 || op == 41 || op == 48) {
+					// MOV reg left
+					// 此处在分配寄存器的时候已经移动了左操作数，这里不必再生成一遍
+					Assemble a1 = new Assemble();
+					a1.setLeftObj(register);
+					a1.setRightObj(rightName);
+					switch (op) {
+					case 43: // +
+						a1.setOpreator("ADD");
+						break;
+					case 45: // -
+						a1.setOpreator("SUB");
+						break;
+					case 41: // *
+						a1.setOpreator("MUL");
+						break;
+					case 48: // /
+						a1.setOpreator("DIV");
+						break;
+					}
+					assembleList.add(a1);
+
+					// 如果左右操作数在register中，需要删去（此时运算后变成了结果数）
+					if (isSaveIn(leftName, register) || isSaveIn(rightName, register)) {
+						for (Symbol symbol : symbolList) {
+							if (symbol.getName().equals(leftName) || symbol.getName().equals(rightName)) {
+								// 检测同名register并将其从存储信息中删掉
+								symbol.getSaveValue().remove(register);
+								// 将该register的左操作数删去
+								if (register.equals("bx")) {
+									bx.remove(leftName);
+									bx.remove(rightName);
+								} else if (register.equals("dx")) {
+									dx.remove(leftName);
+									dx.remove(rightName);
+								}
 							}
+
 						}
-						
 					}
 				}
-			}
-			// :=
-			else if (op == 51) {
-				String register = getRegister(equality4);
-				Assemble assemble = new Assemble();
-				assemble.setLabel(assembleList.size());
-				assemble.setOpreator("MOV");// 注意以下迪操作数互换位置
-				assemble.setLeftObj(resultName);
-				assemble.setRightObj(register);
-				assembleList.add(assemble);
-				// 清相关信息链
-				// delSymbolOnceInfoLink(symbolList.get(leftAddr).getName(), "");
+				// :=
+				else if (op == 51) {
+					Assemble assemble = new Assemble();
+					assemble.setOpreator("MOV");// 注意以下操作数互换位置
+					assemble.setLeftObj(resultName);
+					assemble.setRightObj(register);
+					assembleList.add(assemble);
+				}
+
+				// 生成完这一句四元式对应的目标代码之后，检测Y,Z是否之后非待用/非活跃
+				// 如果是则将它所处的寄存器给释放
+				delSymbolOnceInfoLink(leftName, rightName);
 			}
 			
-			// 生成完这一句四元式对应的目标代码之后，检测Y,Z是否之后非待用/非活跃
-			// 如果是则将它所处的寄存器给释放
-			delSymbolOnceInfoLink(leftName, rightName);
+			// 将填充好的四元式序列加入到基本快四元式序列中
+			basicBlock.setAssembleList(assembleList);
 		}
 	}
 
 	/**
-	 * 删除同名left/right的symbol代用信息链的栈顶，看知乎是否还被使用
-	 * 若未再使用，则释放它占用的寄存器
+	 * 删除同名left/right的symbol代用信息链的栈顶，看知乎是否还被使用 若未再使用，则释放它占用的寄存器
 	 * 
 	 * @param leftName
 	 * @param rightName
@@ -397,6 +408,40 @@ public class Create {
 					dx.remove(rightName);
 				}
 			}
+		}
+	}
+
+	/**
+	 * 获取某四元式所在的基本块名字
+	 * 
+	 * @param equality4Index
+	 * @return
+	 */
+	private String getBlockByEquality4(int equality4Index) {
+		for (int i = 0; i < entranceNum.size() - 1; i++) {
+			if (equality4Index >= entranceNum.get(i) && equality4Index < entranceNum.get(i + 1)) {
+				return "BLOCK" + i;
+			}
+		}
+		return "BLOCK" + (entranceNum.size() - 1);
+	}
+	
+	/**
+	 * 显示每个基本块生成的目标代码
+	 */
+	public void showTargetCode() {
+		for (BasicBlock basicBlock : blocks) {
+			System.out.println(basicBlock.getName() + ":");
+			
+			// 遍历输出每个基本块的目标代码
+			for(Assemble assemble : basicBlock.getAssembleList()) {
+				System.out.println(assemble.toString());
+			}
+			
+			// 遍历输出每个基本块的四元式代码
+						for(Equality4 equality4 : basicBlock.getEquality4List()) {
+							System.out.println(equality4.toString());
+						}
 		}
 	}
 	
