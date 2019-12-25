@@ -17,7 +17,7 @@ public class Create {
 	// symbol符号表
 	ArrayList<Symbol> symbolList = new ArrayList<>();
 	// 汇编代码表
-//	ArrayList<Assemble> assembleList = new ArrayList<>();
+	// ArrayList<Assemble> assembleList = new ArrayList<>();
 	// 基本块表
 	ArrayList<BasicBlock> blocks = new ArrayList<>();
 	// 四元式序列表
@@ -30,7 +30,7 @@ public class Create {
 	// 入口四元式序号数组
 	private ArrayList<Integer> entranceNum = new ArrayList<>();
 	// 判断是否寄存器都被使用，且左操作数未使用
-	private boolean isRegFullUse = false;
+	// private boolean isRegFullUse = false;
 
 	/**
 	 * 
@@ -61,6 +61,29 @@ public class Create {
 		createTarget();
 	}
 
+	
+
+	/**
+	 * 显示分析结果
+	 */
+	public void showResult() {
+		String output = "";
+		System.out.println("------------------ 生成目标代码序列如下：------------------");
+		// 遍历每个基本快
+		for (BasicBlock basicBlock : blocks) {
+			System.out.println(basicBlock.getName() + ":");
+			output += basicBlock.getName() + ":";
+			
+			// 遍历输出每个基本块里的目标代码序列
+			for (Assemble assemble : basicBlock.getAssembleList()) {
+				System.out.println(assemble.toString() + "\r\n");
+				output += assemble.toString();
+			}
+		}
+		TxtTool.writeFile(output, "assemebleCreateTarget.txt");
+	}
+	
+	
 	/**
 	 * 从后往前的回填待用信息
 	 */
@@ -107,6 +130,7 @@ public class Create {
 
 		}
 		// 显示生成的待用信息
+		System.out.println("------------------ symbol表初始化的待用信息链如下： ------------------");
 		for (int i = 1; i < symbolList.size(); i++) {
 			System.out.println(symbolList.get(i).toStringWithInfoLink());
 		}
@@ -158,8 +182,8 @@ public class Create {
 	}
 
 	/**
-	 * 为某四元式分配寄存器
-	 * 如果需要mov移动，则将产生的目标代码加入到指定的目标代码序列中
+	 * 为某四元式分配寄存器 如果需要mov移动，则将产生的目标代码加入到指定的目标代码序列中
+	 * 
 	 * @param equality4
 	 * @param assembleList
 	 * @return
@@ -173,26 +197,26 @@ public class Create {
 		if (isSaveIn(leftName, "bx") || bx.size() == 0) {
 			// 如果之前不在bx中，则往bx中加入该操作数，且该操作数的存放情况中加入bx，并生成MOV四元式
 			if (!isSaveIn(leftName, "bx")) {
-				symbolSaveOneReg(leftName, bx, "bx",assembleList);
+				symbolSaveOneReg(leftName, bx, "bx", assembleList);
 			}
 			return "bx";
 		}
 		// 同理判断dx
 		else if (isSaveIn(leftName, "dx") || dx.size() == 0) {
 			if (!isSaveIn(leftName, "dx")) {
-				symbolSaveOneReg(leftName, dx, "dx",assembleList);
+				symbolSaveOneReg(leftName, dx, "dx", assembleList);
 			}
 			return "dx";
 		}
 		// 如果都有存信息，且左操作数不在其中。则选一个最晚被使用的寄存器，并将其内容备份移到内存中
 		else {
-			isRegFullUse = true;
+			// isRegFullUse = true;
 			if (bx.size() > dx.size())// 选取一个现在存放变量最少的寄存器
 			{
-				symbolSaveOneReg(leftName, dx, "dx",assembleList);
+				symbolSaveOneReg(leftName, dx, "dx", assembleList);
 				return "dx";
 			} else {
-				symbolSaveOneReg(leftName, bx, "bx",assembleList);
+				symbolSaveOneReg(leftName, bx, "bx", assembleList);
 				return "bx";
 			}
 		}
@@ -219,13 +243,13 @@ public class Create {
 	}
 
 	/**
-	 * 将该符号名对应的符号存放信息加上该寄存器；而该寄存器存放信息加上该符号名 （前提该寄存器没有存放该符号）
-	 * 并且将移动的目标代码加入到指定的目标代码序列中
+	 * 将该符号名对应的符号存放信息加上该寄存器；而该寄存器存放信息加上该符号名 （前提该寄存器没有存放该符号） 并且将移动的目标代码加入到指定的目标代码序列中
+	 * 
 	 * @param symbolName
 	 * @param register
 	 */
-	private void symbolSaveOneReg(String symbolName, ArrayList<String> register, 
-			String registerName, ArrayList<Assemble> assembleList) {
+	private void symbolSaveOneReg(String symbolName, ArrayList<String> register, String registerName,
+			ArrayList<Assemble> assembleList) {
 		register.add(symbolName);
 		for (Symbol symbol : symbolList) {
 			if (symbol.getName().equals(symbolName)) {
@@ -247,10 +271,8 @@ public class Create {
 		// 遍历每个基本块
 		for (BasicBlock basicBlock : blocks) {
 			// 对基本块的每个四元式做处理
-			ArrayList<Assemble> assembleList = new ArrayList<>();//每个基本块对应的目标代码序列
+			ArrayList<Assemble> assembleList = new ArrayList<>();// 每个基本块对应的目标代码序列
 			for (Equality4 equality4 : basicBlock.getEquality4List()) {
-				// 每个四元式分配的寄存器
-				String register = getRegister(equality4,assembleList);
 				int op = equality4.getOperator();
 				int leftAddr = equality4.getLeftAddress();
 				int rightAddr = equality4.getRightAddress();
@@ -273,6 +295,7 @@ public class Create {
 				}
 				// j< j<= j> j>= j<> j=
 				else if (op == 53 || op == 54 || op == 57 || op == 58 || op == 55 || op == 56) {
+					String register = getRegister(equality4, assembleList);
 					// MOV reg left
 					Assemble a1 = new Assemble();
 					a1.setOpreator("MOV");
@@ -315,6 +338,7 @@ public class Create {
 				}
 				// + - * /
 				else if (op == 43 || op == 45 || op == 41 || op == 48) {
+					String register = getRegister(equality4, assembleList);
 					// MOV reg left
 					// 此处在分配寄存器的时候已经移动了左操作数，这里不必再生成一遍
 					Assemble a1 = new Assemble();
@@ -357,6 +381,7 @@ public class Create {
 				}
 				// :=
 				else if (op == 51) {
+					String register = getRegister(equality4, assembleList);
 					Assemble assemble = new Assemble();
 					assemble.setOpreator("MOV");// 注意以下操作数互换位置
 					assemble.setLeftObj(resultName);
@@ -368,7 +393,7 @@ public class Create {
 				// 如果是则将它所处的寄存器给释放
 				delSymbolOnceInfoLink(leftName, rightName);
 			}
-			
+
 			// 将填充好的四元式序列加入到基本快四元式序列中
 			basicBlock.setAssembleList(assembleList);
 		}
@@ -423,26 +448,7 @@ public class Create {
 				return "BLOCK" + i;
 			}
 		}
+		// 返回最后一个
 		return "BLOCK" + (entranceNum.size() - 1);
 	}
-	
-	/**
-	 * 显示每个基本块生成的目标代码
-	 */
-	public void showTargetCode() {
-		for (BasicBlock basicBlock : blocks) {
-			System.out.println(basicBlock.getName() + ":");
-			
-			// 遍历输出每个基本块的目标代码
-			for(Assemble assemble : basicBlock.getAssembleList()) {
-				System.out.println(assemble.toString());
-			}
-			
-			// 遍历输出每个基本块的四元式代码
-						for(Equality4 equality4 : basicBlock.getEquality4List()) {
-							System.out.println(equality4.toString());
-						}
-		}
-	}
-	
 }

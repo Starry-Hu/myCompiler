@@ -111,6 +111,27 @@ public class Semantic {
 		equality4List.add(equality4);
 	}
 
+	public void showResult() {
+		String output = "";
+
+		System.out.println("------------------ 语义分析更新symbol表如下： ------------------");
+		for (int i = 1; i < symbolList.size(); i++) {
+			Symbol symbol = symbolList.get(i);
+			output += symbol.toString() + "\r\n";
+			System.out.println(symbol.toString());
+		}
+		TxtTool.writeFile(output, "symbolSemantic.txt");
+		
+		System.out.println("------------------ 语义分析得到的四元式序列如下： ------------------");
+		output = "";
+		for (int i = 1; i < equality4List.size(); i++) {
+			Equality4 equality4 = equality4List.get(i);
+			output += equality4.toString() + "\r\n";
+			System.out.println(equality4.toString());
+		}
+		TxtTool.writeFile(output, "equality4Semantic.txt");
+		
+	}
 	/**
 	 * --- 主要处理的代码块，调用 ---
 	 */

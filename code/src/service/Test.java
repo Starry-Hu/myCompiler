@@ -1,103 +1,58 @@
 package service;
 
-import bean.Assemble;
-import bean.Equality4;
-import bean.Error;
-import bean.Symbol;
-import bean.Token;
+import java.util.Scanner;
 
 public class Test {
 
 	public static void main(String[] args) {
-		String input = TxtTool.readFile("input.txt");
-		String output = "";
+		Scanner scanner = new Scanner(System.in);
+		System.out.println("------------------ 请输入要分析的源程序txt文件名： ------------------");
+		String filename = scanner.nextLine();
+		String input = TxtTool.readFile(filename);
+
+		// 词法分析
 		Morphology morphology = new Morphology();
 		morphology.initial(input);
 		morphology.implement();
 
-//		System.out.println("------------------ 词法分析得到token表如下： ------------------");
-//		for (int i = 1; i < morphology.tokenList.size(); i++) {
-//			Token token = morphology.tokenList.get(i);
-//			output += token.toString() + "\r\n";
-//			System.out.println(token.toString());
-//		}
-//		TxtTool.writeFile(output, "tokenMorphology.txt");
-//
-//		System.out.println("------------------ 词法分析得到symbol表如下： ------------------");
-//		output = "";
-//		for (int i = 1; i < morphology.symbolList.size(); i++) {
-//			Symbol symbol = morphology.symbolList.get(i);
-//			output += symbol.toString() + "\r\n";
-//			System.out.println(symbol.toString());
-//		}
-//		TxtTool.writeFile(output, "symbolMorphology.txt");
-//
-//		System.out.println("------------------ 词法分析的错误信息如下： ------------------");
-//		output = "";
-//		output += "共有" + morphology.errorList.size() + "个错误";
-//		System.out.println("共有" + morphology.errorList.size() + "个错误");
-//		for (Error error : morphology.errorList) {
-//			output += error.toString() + "\r\n";
-//			System.out.println(error.toString());
-//		}
-//		TxtTool.writeFile(output, "errorMorphology.txt");
+		// 语法分析
+		Grammar grammar = new Grammar();
+		grammar.initial(morphology.tokenList, morphology.symbolList);
+		grammar.implement();
 
-
-		// Grammar grammar = new Grammar();
-		// grammar.initial(morphology.tokenList, morphology.symbolList);
-		// grammar.implement();
-		//
-		// System.out.println("---------------------------------------------------------");
-		//
-		// System.out.println("------------------ 语法分析的错误信息如下： ------------------");
-		// System.out.println(grammar.error);
-		//
-		// System.out.println("------------------ 语法分析更新symbol表如下： ------------------");
-		// for(Symbol symbol : grammar.symbolList) {
-		// System.out.println(symbol.toString());
-		// }
-
+		// 语义分析
 		Semantic semantic = new Semantic();
 		semantic.initial(morphology.tokenList, morphology.symbolList);
 		semantic.implement();
-//
-//		System.out.println("---------------------------------------------------------");
-//		System.out.println("------------------ 语义分析的错误信息如下： ------------------");
-//		System.out.println(semantic.error);
 
-//		System.out.println("------------------ 语义分析更新symbol表如下： ------------------");
-//		output = "";
-//		for (int i = 1; i < semantic.symbolList.size(); i++) {
-//			Symbol symbol = semantic.symbolList.get(i);
-//			output += symbol.toString() + "\r\n";
-//			System.out.println(symbol.toString());
-//		}
-//		TxtTool.writeFile(output, "symbolSemantic.txt");
-//
-//		System.out.println("------------------ 语义分析得到的四元式序列如下： ------------------");
-//		output = "";
-//		for (int i = 1; i < semantic.equality4List.size(); i++) {
-//			Equality4 equality4 = semantic.equality4List.get(i);
-//			output += equality4.toString() + "\r\n";
-//			System.out.println(equality4.toString());
-//		}
-//		TxtTool.writeFile(output, "equality4Semantic.txt");
-
+		// 目标代码生成
 		Create create = new Create();
 		create.initial(semantic.symbolList, semantic.equality4List);// 使用语义分析后的信息来初始化
-		create.implement();
-//
-//		System.out.println("---------------------------------------------------------");
-//
-//		System.out.println("------------------ 生成目标代码时更新symbol表如下：------------------");
-//		output = "";
-//		for (Symbol symbol : create.symbolList) {
-//			System.out.println(symbol.toStringWithInfoLink());
-//		}
-//		TxtTool.writeFile(output, "symbolCreateTarget.txt");
-//
-		System.out.println("------------------ 生成目标代码如下： ------------------");
-		create.showTargetCode();
-	}
 
+		System.out.println("------------------ 请输入要显示的分析信息： ------------------");
+		System.out.println("(1)词法分析;	(2)语法分析;	(3)语义分析;	(4)目标代码生成;	(9)退出");
+
+		int choose = scanner.nextInt();
+		while (choose != 9) {
+			if (choose == 1) {
+				morphology.showResult();
+			}else if(choose == 2){
+				grammar.showResult();
+			}else if (choose == 3) {
+				semantic.showResult();
+			}else if (choose == 4) {
+				create.implement();
+				create.showResult();
+			}else {
+				System.out.println("错误输入！请重新输入命令");
+			}
+			System.out.println("------------------ 请输入要显示的分析信息： ------------------");
+			System.out.println("(1)词法分析;	(2)语法分析;	(3)语义分析;	(4)目标代码生成;	(9)退出");
+			choose = scanner.nextInt();
+		}
+		
+		scanner.close();
+		System.out.println("------------------ 已退出程序！ ------------------");
+	}
+	
 }

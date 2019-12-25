@@ -38,6 +38,7 @@ public class Grammar {
 
 	/**
 	 * 传入词法分析产生的token文件和symbol文件，进行语法分析
+	 * 
 	 * @param tokenList
 	 * @param symbolList
 	 */
@@ -45,7 +46,25 @@ public class Grammar {
 		this.tokenList = tokenList;
 		this.symbolList = symbolList;
 	}
-	
+
+	/**
+	 * 显示分析信息
+	 */
+	public void showResult() {
+		System.out.println("------------------ 语法分析的错误信息如下： ------------------");
+		System.out.println(error);
+
+		System.out.println("------------------ 语法分析更新symbol表如下： ------------------");
+		String output = "";
+		for (int i = 1; i < symbolList.size(); i++) {
+			Symbol symbol = symbolList.get(i);
+			output += symbol.toString() + "\r\n";
+			System.out.println(symbol.toString());
+		}
+		TxtTool.writeFile(output, "symbolGrammar.txt");
+
+	}
+
 	/**
 	 * --- 主要处理的代码块，调用 ---
 	 */
@@ -60,7 +79,7 @@ public class Grammar {
 				if (tokenList.get(i).getType() == 30) {
 					next();
 					programBody();// 执行程序体
-				}else {
+				} else {
 					error = "该程序program方法名后缺少： ;";
 				}
 			} else {
@@ -125,7 +144,7 @@ public class Grammar {
 						if (tokenList.get(i).getType() == 2) { // begin，执行复合句
 							next();
 							complexSentence();
-						} else if (tokenList.get(i).getType() == 16){ // var，继续变量定义
+						} else if (tokenList.get(i).getType() == 16) { // var，继续变量定义
 							next();
 							varDefine();// 继续执行变量定义
 						} else {

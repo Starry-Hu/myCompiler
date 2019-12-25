@@ -446,4 +446,38 @@ public class Morphology {
 		}
 		return 0;// 匹配失败，则为标识符
 	}
+	
+	/**
+	 * 显示分析结果
+	 */
+	public void showResult() {
+		String output = "";
+		System.out.println("------------------ 词法分析得到token表如下： ------------------");
+		for (int i = 1; i < tokenList.size(); i++) {
+			Token token = tokenList.get(i);
+			output += token.toString() + "\r\n";
+			System.out.println(token.toString());
+		}
+		TxtTool.writeFile(output, "tokenMorphology.txt");
+		
+		System.out.println("------------------ 词法分析得到symbol表如下： ------------------");
+		output = "";
+		for (int i = 1; i < symbolList.size(); i++) {
+			Symbol symbol = symbolList.get(i);
+			output += symbol.toString() + "\r\n";
+			System.out.println(symbol.toString());
+		}
+		TxtTool.writeFile(output, "symbolMorphology.txt");
+		
+		
+		System.out.println("------------------ 词法分析的错误信息如下： ------------------");
+		output = "";
+		output += "共有" + errorList.size() + "个错误";
+		System.out.println("共有" + errorList.size() + "个错误");
+		for (Error error : errorList) {
+			output += error.toString() + "\r\n";
+			System.out.println(error.toString());
+		}
+		TxtTool.writeFile(output, "errorMorphology.txt");
+	}
 }
