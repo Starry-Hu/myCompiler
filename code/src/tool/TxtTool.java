@@ -1,4 +1,4 @@
-package service;
+package tool;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;

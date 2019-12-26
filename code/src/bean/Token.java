@@ -53,5 +53,14 @@ public class Token {
 		return "(" + label + ")(" + name + ", " + type + ", " + address + ")";
 	}
 
-	
+	@Override
+	public Object clone() throws CloneNotSupportedException {
+		Token other = new Token();
+		other.setAddress(address);
+		other.setLabel(label);
+		other.setName(name);
+		other.setType(type);
+		
+		return other;
+	}
 }

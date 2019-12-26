@@ -4,7 +4,10 @@ begin
 a:=1.2b56;
 b:=2.3.6;
 c:=a+b;
-if a < b then
-// 测试注释
-a := a+ 1;
+while a < b do
+  // 测试注释
+  if c>d then
+  c:= c - 2;
+~
+a:= 5.9;
 end

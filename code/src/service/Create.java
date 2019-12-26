@@ -6,6 +6,8 @@ import bean.Assemble;
 import bean.BasicBlock;
 import bean.Equality4;
 import bean.Symbol;
+import bean.Token;
+import tool.TxtTool;
 
 /**
  * 生成目标代码
@@ -43,10 +45,15 @@ public class Create {
 	 * 
 	 * @param symbolList
 	 * @param equality4List
+	 * @throws CloneNotSupportedException 
 	 */
-	public void initial(ArrayList<Symbol> symbolList, ArrayList<Equality4> equality4List) {
-		this.symbolList = symbolList;
-		this.equality4List = equality4List;
+	public void initial(ArrayList<Symbol> symbolList, ArrayList<Equality4> equality4List) throws CloneNotSupportedException {
+		for(Symbol symbol : symbolList) {
+			this.symbolList.add((Symbol) symbol.clone());
+		}
+		for(Equality4 equality4 : equality4List) {
+			this.equality4List.add((Equality4) equality4.clone());
+		}
 	}
 
 	/**
@@ -72,12 +79,12 @@ public class Create {
 		// 遍历每个基本快
 		for (BasicBlock basicBlock : blocks) {
 			System.out.println(basicBlock.getName() + ":");
-			output += basicBlock.getName() + ":";
+			output += basicBlock.getName() + ":" + "\r\n";
 			
 			// 遍历输出每个基本块里的目标代码序列
 			for (Assemble assemble : basicBlock.getAssembleList()) {
-				System.out.println(assemble.toString() + "\r\n");
-				output += assemble.toString();
+				System.out.println(assemble.toString());
+				output += assemble.toString() + "\r\n";
 			}
 		}
 		TxtTool.writeFile(output, "assemebleCreateTarget.txt");
@@ -127,8 +134,33 @@ public class Create {
 					}
 				}
 			}
-
+			// 条件转移的范围，需要左右操作数进行相应的运算
+			else if(op > 52) {
+				// 获取左操作数
+				int leftAddr = equality4List.get(i).getLeftAddress();
+				String leftName = symbolList.get(leftAddr).getName();
+				// 将其对应的symbol设置待用/活跃
+				for (Symbol symbol : symbolList) {
+					if (symbol.getName().equals(leftName)) {
+						String info = i + ",Y";
+						symbol.getInfoLink().add(info);
+					}
+				}
+				
+				// 获取右操作数
+				int rightAddr = equality4List.get(i).getRightAddress();
+				String rightName = symbolList.get(rightAddr).getName();
+				// 将其对应的symbol设置待用/活跃
+				for (Symbol symbol : symbolList) {
+					if (symbol.getName().equals(rightName)) {
+						String info = i + ",Y";
+						symbol.getInfoLink().add(info);
+					}
+				}
+			}
 		}
+		
+		
 		// 显示生成的待用信息
 		System.out.println("------------------ symbol表初始化的待用信息链如下： ------------------");
 		for (int i = 1; i < symbolList.size(); i++) {
@@ -297,11 +329,7 @@ public class Create {
 				else if (op == 53 || op == 54 || op == 57 || op == 58 || op == 55 || op == 56) {
 					String register = getRegister(equality4, assembleList);
 					// MOV reg left
-					Assemble a1 = new Assemble();
-					a1.setOpreator("MOV");
-					a1.setLeftObj(register);
-					a1.setRightObj(leftName);
-					assembleList.add(a1);
+					// 此处在分配寄存器的时候已经移动了左操作数，这里不必再生成一遍
 					// CMP reg right
 					Assemble a2 = new Assemble();
 					a2.setOpreator("CMP");
@@ -341,26 +369,33 @@ public class Create {
 					String register = getRegister(equality4, assembleList);
 					// MOV reg left
 					// 此处在分配寄存器的时候已经移动了左操作数，这里不必再生成一遍
-					Assemble a1 = new Assemble();
-					a1.setLeftObj(register);
-					a1.setRightObj(rightName);
+					// OP reg ight
+					Assemble a2 = new Assemble();
+					a2.setLeftObj(register);
+					a2.setRightObj(rightName);
 					switch (op) {
 					case 43: // +
-						a1.setOpreator("ADD");
+						a2.setOpreator("ADD");
 						break;
 					case 45: // -
-						a1.setOpreator("SUB");
+						a2.setOpreator("SUB");
 						break;
 					case 41: // *
-						a1.setOpreator("MUL");
+						a2.setOpreator("MUL");
 						break;
 					case 48: // /
-						a1.setOpreator("DIV");
+						a2.setOpreator("DIV");
 						break;
 					}
-					assembleList.add(a1);
-
-					// 如果左右操作数在register中，需要删去（此时运算后变成了结果数）
+					assembleList.add(a2);
+					// MOV result reg (将最终结果搬到临时变量中去)
+					Assemble a3 = new Assemble();
+					a3.setOpreator("MOV");
+					a3.setLeftObj(resultName);
+					a3.setRightObj(register);
+					assembleList.add(a3);
+					
+					// 如果之前左右操作数在register中，需要删去（此时运算后变成了结果数）
 					if (isSaveIn(leftName, register) || isSaveIn(rightName, register)) {
 						for (Symbol symbol : symbolList) {
 							if (symbol.getName().equals(leftName) || symbol.getName().equals(rightName)) {

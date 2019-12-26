@@ -2,9 +2,11 @@ package service;
 
 import java.util.Scanner;
 
+import tool.TxtTool;
+
 public class Test {
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws CloneNotSupportedException {
 		Scanner scanner = new Scanner(System.in);
 		System.out.println("------------------ 请输入要分析的源程序txt文件名： ------------------");
 		String filename = scanner.nextLine();

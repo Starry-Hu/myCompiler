@@ -7,6 +7,7 @@ import bean.S;
 import bean.E;
 import bean.Symbol;
 import bean.Token;
+import tool.TxtTool;
 
 /**
  * 语义分析
@@ -60,6 +61,7 @@ public class Semantic {
 		Symbol symbol = new Symbol();
 		symbol.setName("T" + ti);
 		symbol.setNumber(temp);
+		symbol.setType(18); //设为标识符
 		symbolList.add(symbol);
 		ti++;
 		return temp;
@@ -102,18 +104,26 @@ public class Semantic {
 	 * 注意！ 对四元式序列表填充一个对象，使其起始位置从1开始
 	 * @param tokenList
 	 * @param symbolList
+	 * @throws CloneNotSupportedException 
 	 */
-	public void initial(ArrayList<Token> tokenList, ArrayList<Symbol> symbolList) {
-		this.tokenList = tokenList;
-		this.symbolList = symbolList;
+	public void initial(ArrayList<Token> tokenList, ArrayList<Symbol> symbolList) throws CloneNotSupportedException {
+		for(Token token : tokenList) {
+			this.tokenList.add((Token) token.clone());
+		}
+		for(Symbol symbol : symbolList) {
+			this.symbolList.add((Symbol) symbol.clone());
+		}
 		
 		Equality4 equality4 = new Equality4();
 		equality4List.add(equality4);
 	}
 
 	public void showResult() {
+		System.out.println("------------------ 语义分析的错误信息如下： ------------------");
+		System.out.println(error);
+		
 		String output = "";
-
+		
 		System.out.println("------------------ 语义分析更新symbol表如下： ------------------");
 		for (int i = 1; i < symbolList.size(); i++) {
 			Symbol symbol = symbolList.get(i);

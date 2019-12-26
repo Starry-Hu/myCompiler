@@ -40,7 +40,7 @@ public class Assemble {
 
 	@Override
 	public String toString() {
-		return "(" + opreator + ", " + leftObj + ", " + rightObj + ")";
+		return "" + opreator + " " + leftObj + ", " + rightObj;
 	}
 
 }

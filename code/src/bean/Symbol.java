@@ -81,4 +81,18 @@ public class Symbol {
 		}
 		return base;
 	}
+	
+	@Override
+	public Object clone() throws CloneNotSupportedException {
+		Symbol other = new Symbol();
+		other.setName(name);
+		other.setType(type);
+		other.setNumber(number);
+		Stack<String> info = new Stack<>();
+		info.addAll(infoLink);
+		ArrayList<String> save = new ArrayList<>();
+		save.addAll(saveValue);
+		
+		return other;
+	}
 }

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 
 import bean.Symbol;
 import bean.Token;
+import tool.TxtTool;
 import bean.Error;
 
 /**
@@ -472,8 +473,8 @@ public class Morphology {
 		
 		System.out.println("------------------ 词法分析的错误信息如下： ------------------");
 		output = "";
-		output += "共有" + errorList.size() + "个错误";
-		System.out.println("共有" + errorList.size() + "个错误");
+		output += "共有" + errorList.size() + "个错误" + "\r\n";
+		System.out.println("共有" + errorList.size() + "个错误" );
 		for (Error error : errorList) {
 			output += error.toString() + "\r\n";
 			System.out.println(error.toString());

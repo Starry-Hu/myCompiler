@@ -1,0 +1,33 @@
+BLOCK0:
+MOV bx, 1.2
+MOV a, bx
+MOV dx, 2.3
+MOV b, dx
+MOV bx, a
+ADD bx, b
+MOV T1, bx
+MOV bx, T1
+MOV c, bx
+BLOCK1:
+BLOCK2:
+MOV dx, a
+CMP dx, b
+JL BLOCK4,  
+BLOCK3:
+JMP BLOCK7, 
+BLOCK4:
+MOV bx, c
+CMP bx, d
+JG BLOCK6,  
+BLOCK5:
+JMP BLOCK2, 
+BLOCK6:
+SUB bx, 2
+MOV T2, bx
+MOV bx, T2
+MOV c, bx
+JMP BLOCK2, 
+BLOCK7:
+MOV dx, 5.9
+MOV a, dx
+BLOCK8:

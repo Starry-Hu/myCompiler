@@ -73,5 +73,18 @@ public class Equality4 {
 	public String toString() {
 		return "(" + label + ")(" + operator + ", " + leftAddress + ", " + rightAddress + ", " + resultAddress + ")";
 	}
+	
+	@Override
+	public Object clone() throws CloneNotSupportedException {
+		Equality4 other = new Equality4();
+		other.setLabel(label);
+		other.setOperator(operator);
+		other.setLeftAddress(leftAddress);
+		other.setRightAddress(rightAddress);
+		other.setResultAddress(resultAddress);
+		other.setEntrance(isEntrance);
+		
+		return other;
+	}
 
 }

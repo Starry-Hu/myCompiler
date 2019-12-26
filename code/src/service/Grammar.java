@@ -4,14 +4,13 @@ import java.util.ArrayList;
 
 import bean.Symbol;
 import bean.Token;
+import tool.TxtTool;
 
 public class Grammar {
 	// token表
 	ArrayList<Token> tokenList = new ArrayList<>();
 	// symbol符号表
 	ArrayList<Symbol> symbolList = new ArrayList<>();
-	// 错误记录表
-	ArrayList<String> errorList = new ArrayList<>();
 
 	// 扫描token表的下标
 	private int i = 1;
@@ -41,10 +40,15 @@ public class Grammar {
 	 * 
 	 * @param tokenList
 	 * @param symbolList
+	 * @throws CloneNotSupportedException 
 	 */
-	public void initial(ArrayList<Token> tokenList, ArrayList<Symbol> symbolList) {
-		this.tokenList = tokenList;
-		this.symbolList = symbolList;
+	public void initial(ArrayList<Token> tokenList, ArrayList<Symbol> symbolList) throws CloneNotSupportedException {
+		for(Token token : tokenList) {
+			this.tokenList.add((Token) token.clone());
+		}
+		for(Symbol symbol : symbolList) {
+			this.symbolList.add((Symbol) symbol.clone());
+		}
 	}
 
 	/**
